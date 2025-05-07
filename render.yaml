@@ -1,11 +1,11 @@
 services:
   - type: web
-    name: telegram-facebook-bot
+    name: telegram-ads-bot
     runtime: python
     buildCommand: ""
     startCommand: gunicorn main:app --worker-class gthread --threads 4 --bind 0.0.0.0:$PORT
     envVars:
       - key: BOT_TOKEN
-        value: "TELEGRAM_BOT_TOKEN"
+        sync: false
       - key: FB_ACCESS_TOKEN
-        value: "FACEBOOK_ACCESS_TOKEN"
+        sync: false

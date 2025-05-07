@@ -4,25 +4,32 @@ from telegram import Bot, Update
 from telegram.ext import Dispatcher, CommandHandler
 import requests
 
-# 🔐 Biến môi trường
+# 🔐 Lấy biến môi trường
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 FB_ACCESS_TOKEN = os.getenv("FB_ACCESS_TOKEN")
 
-# 🚀 Khởi tạo Flask app và Telegram bot
+# 🚨 Kiểm tra token có tồn tại không
+if TELEGRAM_TOKEN is None:
+    raise ValueError("❌ TELEGRAM_TOKEN chưa được thiết lập.")
+if FB_ACCESS_TOKEN is None:
+    raise ValueError("❌ FB_ACCESS_TOKEN chưa được thiết lập.")
+
+# 🚀 Tạo Flask app & Telegram bot
 app = Flask(__name__)
 bot = Bot(token=TELEGRAM_TOKEN)
 dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
 
-# 🔧 Gọi Facebook API để bật/tắt
+# 📡 Gọi Facebook API để thay đổi trạng thái quảng cáo
 def change_status(obj_id, status):
     url = f"https://graph.facebook.com/v21.0/{obj_id}"
     headers = {"Authorization": f"Bearer {FB_ACCESS_TOKEN}"}
     data = {"status": status}
     return requests.post(url, headers=headers, data=data)
 
-# 📍 /off ad/campaign/adset ID
+# 📍 Lệnh /off
 def off(update, context):
     if len(context.args) != 2:
+        update.message.reply_text("❌ Cú pháp đúng: /off {loại} {id}")
         return
     _, obj_id = context.args
     res = change_status(obj_id, "PAUSED")
@@ -31,9 +38,10 @@ def off(update, context):
     else:
         update.message.reply_text(f"❌ Lỗi: {res.text}")
 
-# 📍 /on ad/campaign/adset ID
+# 📍 Lệnh /on
 def on(update, context):
     if len(context.args) != 2:
+        update.message.reply_text("❌ Cú pháp đúng: /on {loại} {id}")
         return
     _, obj_id = context.args
     res = change_status(obj_id, "ACTIVE")
@@ -42,22 +50,22 @@ def on(update, context):
     else:
         update.message.reply_text(f"❌ Lỗi: {res.text}")
 
-# 🔌 Gắn handler
+# 🧩 Gắn handler
 dispatcher.add_handler(CommandHandler("off", off))
 dispatcher.add_handler(CommandHandler("on", on))
 
-# 📡 Webhook nhận từ Telegram
-@app.route(f"/webhook/{TELEGRAM_TOKEN}", methods=["POST"])
+# ✅ Route nhận Webhook Telegram
+@app.route("/webhook", methods=["POST"])
 def webhook():
     update = Update.de_json(request.get_json(force=True), bot)
     dispatcher.process_update(update)
     return "OK", 200
 
-# 🔍 Kiểm tra bot
+# 📄 Trang kiểm tra bot hoạt động
 @app.route("/")
 def home():
-    return "✅ Facebook Ads Bot is running", 200
+    return "✅ Facebook Ads Bot đang chạy!", 200
 
-# 🚀 Chạy app
+# 🚀 Chạy Flask app (chỉ dùng khi local test)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

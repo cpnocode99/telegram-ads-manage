@@ -12,7 +12,7 @@ application = Application.builder().token(BOT_TOKEN).rate_limiter(AIORateLimiter
 
 # Gọi API Facebook
 def change_status(obj_id, status):
-    url = f"https://graph.facebook.com/v19.0/{obj_id}"
+    url = f"https://graph.facebook.com/v21.0/{obj_id}"
     headers = {"Authorization": f"Bearer {FB_ACCESS_TOKEN}"}
     data = {"status": status}
     return requests.post(url, headers=headers, data=data)

@@ -1,26 +1,28 @@
 from flask import Flask, request
-import os, requests
+import os
+import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-from telegram.ext import AIORateLimiter
 
+# Lấy token từ biến môi trường
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 FB_ACCESS_TOKEN = os.environ["FB_ACCESS_TOKEN"]
 
+# Khởi tạo Flask và Telegram application
 app = Flask(__name__)
-application = Application.builder().token(BOT_TOKEN).rate_limiter(AIORateLimiter()).build()
+application = Application.builder().token(BOT_TOKEN).build()
 
-# Gọi API Facebook
+# Hàm gọi Facebook API để bật/tắt ads
 def change_status(obj_id, status):
     url = f"https://graph.facebook.com/v21.0/{obj_id}"
     headers = {"Authorization": f"Bearer {FB_ACCESS_TOKEN}"}
     data = {"status": status}
     return requests.post(url, headers=headers, data=data)
 
-# /off command
+# Handler cho lệnh /off
 async def off(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 2:
-        return  # Không phản hồi gì cả nếu sai cú pháp
+        return  # Không phản hồi nếu sai cú pháp
     _, obj_id = context.args
     res = change_status(obj_id, "PAUSED")
     if res.status_code == 200:
@@ -28,7 +30,7 @@ async def off(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"❌ Lỗi: {res.text}")
 
-# /on command
+# Handler cho lệnh /on
 async def on(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 2:
         return
@@ -39,13 +41,13 @@ async def on(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"❌ Lỗi: {res.text}")
 
-# Đăng ký command
+# Đăng ký command handler
 application.add_handler(CommandHandler("off", off))
 application.add_handler(CommandHandler("on", on))
 
-# Webhook entrypoint
+# Webhook endpoint (không dùng async)
 @app.post("/webhook")
-async def webhook():
+def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
-    await application.update_queue.put(update)
+    application.update_queue.put_nowait(update)
     return "ok"
